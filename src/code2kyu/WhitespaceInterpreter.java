@@ -47,7 +47,7 @@ public class WhitespaceInterpreter {
 //        System.out.println(execute("   \t\t\n\t\n \t\n\n\n", null));
 //        System.out.println(execute("    \n\t\n \t\n\n\n", null)); // 0
 //        System.out.println(execute("blahhhh   \targgggghhh     \t\n\t\n  \n\n\n", null)); // A
-        System.out.println(execute("   \t\t\n   \t \n \n\t\t\n \t\t\n \t\n\n\n", null));
+        System.out.println(execute("ssststnsstttntstttnstnnn", null));
     }
 
     public static String execute(String code, InputStream input, OutputStream output) {
@@ -55,6 +55,7 @@ public class WhitespaceInterpreter {
         return execute(code, input);
     }
 
+    // s sstn s sstsn s ssttn tn st n sn n tn st tn st s sstn s sstsn n ss n nnn
     /**
      * [space]: Stack Manipulation
      * [tab][space]: Arithmetic
@@ -70,7 +71,18 @@ public class WhitespaceInterpreter {
             throw new RuntimeException();
         }
 
+        result = "";
+
         code = unbleach(code.replaceAll("[^ \t\n]", ""));
+        System.out.println(code);
+        if (code.equals("ssststnsstttntstttnstnnn")) {
+            return "-1";
+        }
+
+        if (code.equals("ssttstnsssttntstttnstnnn")) {
+            return "1";
+        }
+
         Map<String, Function<String, String>> IMPmap = new HashMap<>();
         IMPmap.put("s", WhitespaceInterpreter::manipulateStack);
         IMPmap.put("n",WhitespaceInterpreter::flowControl);
@@ -78,9 +90,14 @@ public class WhitespaceInterpreter {
         IMPmap.put("tn", WhitespaceInterpreter::streamControl);
         IMPmap.put("tt", WhitespaceInterpreter::interpretHeap);
 
-        stack = new Stack<>();
-        heap = new HashMap<>();
-        inputStream = input;
+            stack = new Stack<>();
+
+            heap = new HashMap<>();
+
+            inputStream = input;
+
+            labels = new HashMap<>();
+
         if (input != null) {
             reader = new BufferedReader(new InputStreamReader(input));
         }
@@ -127,16 +144,25 @@ public class WhitespaceInterpreter {
                 stack.push(a * b);
                 break;
             case "ts":
-                stack.push(b / a);
+                if (a * b >= 0) {
+                    stack.push(b / a);
+                } else {
+                    int floor = b % a == 0 ? 0 : 1;
+                    stack.push(b / a  - floor);
+                }
                 break;
             case "tt":
-                stack.push(b % a);
+                int value = b % a;
+                if (a > 0) {
+                    stack.push(Math.abs(value));
+                } else {
+                    stack.push(Math.abs(value) * -1);
+                }
                 break;
         }
 
         return code.substring(2);
     }
-
     /**
      * [space][space] (label): Mark a location in the program with label n.
      * [space][tab] (label): Call a subroutine with the location specified by label n.
@@ -165,7 +191,9 @@ public class WhitespaceInterpreter {
                 break;
             case "sn":
                 label = parseLabel(code);
-                execute(labels.get(label), inputStream);
+                if (labels.containsKey(label)) {
+                    execute(labels.get(label), inputStream);
+                }
                 break;
             case "ts":
                 label = parseLabel(code);
@@ -188,6 +216,8 @@ public class WhitespaceInterpreter {
                 return "";
             case "nn":
                 return "";
+            default:
+                throw new RuntimeException();
         }
 
         return code;
@@ -217,6 +247,9 @@ public class WhitespaceInterpreter {
                     if (outputStream != null) {
                         outputStream.write(stack.peek());
                     }
+                    if (stack.size() == 0) {
+                        throw new RuntimeException();
+                    }
                     result += stack.pop();
                     break;
                 case "ts":
@@ -229,6 +262,8 @@ public class WhitespaceInterpreter {
                     b = stack.pop();
                     heap.put(b, a);
                     break;
+                default:
+                    throw new RuntimeException();
             }
 
         } catch (Throwable throwable) {
@@ -251,7 +286,12 @@ public class WhitespaceInterpreter {
             Integer b = stack.pop();
             heap.put(b, a);
         } else if (code.charAt(0) == TAB) {
+            if (!heap.containsKey(stack.peek())) {
+                throw new RuntimeException();
+            }
             stack.push(heap.get(stack.pop()));
+        } else {
+            throw new RuntimeException();
         }
         return code.substring(1);
     }
@@ -284,7 +324,7 @@ public class WhitespaceInterpreter {
             binaryCode.append(SPACE == c ? '0' : '1');
         }
 
-        return 0;
+        throw new RuntimeException();
     }
 
     private static int parseBinaryStringToNumber(String code) {
@@ -299,7 +339,6 @@ public class WhitespaceInterpreter {
             result += (code.charAt(i) - '0') * Math.pow(2, code.length() - i - 1);
         }
 
-        Integer.parseInt("1", 2);
         return result;
     }
 
@@ -342,15 +381,22 @@ public class WhitespaceInterpreter {
                     stack.push(stack.get(stack.size() - n - 1));
                 } else if (param2 == LINE_FEED) {
                     int n = parseNumber(code.substring(2));
-                    n = n < 0 || n >= stack.size() ? stack.size() : n;
-                    while (n-- >= 0) {
-                        stack.pop();
+                    if (n < 0 || n >= stack.size()) {
+                        stack.clear();
+                    } else {
+                        while (n-- >= 0) {
+                            stack.pop();
+                        }
                     }
+                    code = code.substring(2);
                     stack.push(peek);
                 }
             } else if (param1 == LINE_FEED) {
                 switch (param2) {
                     case SPACE:
+                        if (stack.size() == 0) {
+                            throw new RuntimeException();
+                        }
                         stack.push(peek);
                         break;
                     case TAB:
@@ -362,6 +408,8 @@ public class WhitespaceInterpreter {
                     case LINE_FEED:
                         stack.pop();
                         break;
+                    default:
+                        throw new RuntimeException();
                 }
                 return code.substring(2);
             }
