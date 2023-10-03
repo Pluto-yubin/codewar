@@ -1,6 +1,6 @@
 package code2kyu;
-
 /**
+ *
  * @auther Zhang Yubin
  * @date 2023/9/12 23:32
  */
@@ -47,7 +47,7 @@ public class WhitespaceInterpreter {
 //        System.out.println(execute("   \t\t\n\t\n \t\n\n\n", null));
 //        System.out.println(execute("    \n\t\n \t\n\n\n", null)); // 0
 //        System.out.println(execute("blahhhh   \targgggghhh     \t\n\t\n  \n\n\n", null)); // A
-        System.out.println(execute("ssststnsstttntstttnstnnn", null));
+        System.out.println(execute("ssstnsssttnsssnssstsnsssnssstnnssntnstntsnnnn", null));
     }
 
     public static String execute(String code, InputStream input, OutputStream output) {
@@ -71,9 +71,20 @@ public class WhitespaceInterpreter {
             throw new RuntimeException();
         }
 
-        result = "";
+        if (labels == null) {
 
-        code = unbleach(code.replaceAll("[^ \t\n]", ""));
+            stack = new Stack<>();
+
+            heap = new HashMap<>();
+
+            inputStream = input;
+
+            labels = new HashMap<>();
+
+            result = "";
+        }
+
+//        code = unbleach(code.replaceAll("[^ \t\n]", ""));
         System.out.println(code);
         if (code.equals("ssststnsstttntstttnstnnn")) {
             return "-1";
@@ -90,14 +101,6 @@ public class WhitespaceInterpreter {
         IMPmap.put("tn", WhitespaceInterpreter::streamControl);
         IMPmap.put("tt", WhitespaceInterpreter::interpretHeap);
 
-            stack = new Stack<>();
-
-            heap = new HashMap<>();
-
-            inputStream = input;
-
-            labels = new HashMap<>();
-
         if (input != null) {
             reader = new BufferedReader(new InputStreamReader(input));
         }
@@ -109,13 +112,14 @@ public class WhitespaceInterpreter {
             }
 
             if (ERROR.equals(code)) {
+                labels = null;
                 throw new RuntimeException();
             }
         }
 
-        String temp = result;
-        result = "";
-        return temp;
+//        String temp = result;
+//        result = "";
+        return result;
     }
 
     /**
@@ -180,7 +184,7 @@ public class WhitespaceInterpreter {
         switch (instruct) {
             case "ss":
                 int label = parseLabel(code);
-                code = code.substring(0, code.indexOf(LINE_FEED));
+                code = code.substring(code.indexOf(LINE_FEED) + 1);
                 labels.put(label, code);
                 break;
             case "st":
@@ -197,7 +201,7 @@ public class WhitespaceInterpreter {
                 break;
             case "ts":
                 label = parseLabel(code);
-                code = code.substring(0, code.indexOf(LINE_FEED));
+                code = code.substring(code.indexOf(LINE_FEED) + 1);
                 if (stack.pop() == 0) {
                     execute(labels.get(label), inputStream);
                     return "";
@@ -215,6 +219,7 @@ public class WhitespaceInterpreter {
                 execute(callerCode, inputStream);
                 return "";
             case "nn":
+                labels = null;
                 return "";
             default:
                 throw new RuntimeException();
@@ -286,7 +291,7 @@ public class WhitespaceInterpreter {
             Integer b = stack.pop();
             heap.put(b, a);
         } else if (code.charAt(0) == TAB) {
-            if (!heap.containsKey(stack.peek())) {
+            if (stack.isEmpty() || !heap.containsKey(stack.peek())) {
                 throw new RuntimeException();
             }
             stack.push(heap.get(stack.pop()));
@@ -339,6 +344,7 @@ public class WhitespaceInterpreter {
             result += (code.charAt(i) - '0') * Math.pow(2, code.length() - i - 1);
         }
 
+//         labels = null;
         return result;
     }
 
